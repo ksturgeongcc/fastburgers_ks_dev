@@ -1,0 +1,10 @@
+# Turn on the rewrite engine
+RewriteEngine On
+
+# If the request is an existing file or folder, serve it directly
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Otherwise, send the request to index.php
+RewriteRule ^ index.php [L]
