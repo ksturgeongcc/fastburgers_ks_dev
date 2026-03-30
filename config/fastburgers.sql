@@ -1,269 +1,144 @@
--- FastBurgers Prototype RDBMS (MySQL 8+)
--- Ready to import into phpMyAdmin.
--- Focus: orders taken by staff, popular items, payment method, menus (regular + savers),
--- shifts for managers/sales, and stock with automatic restock requests.
+-- phpMyAdmin SQL Dump
+-- version 5.2.1
+-- https://www.phpmyadmin.net/
+--
+-- Host: localhost:8889
+-- Generation Time: Mar 30, 2026 at 11:24 PM
+-- Server version: 8.0.40
+-- PHP Version: 8.3.14
 
-SET NAMES utf8mb4;
-SET time_zone = '+00:00';
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
 
--- ---------------------------------------------------------------------
--- 1) Database
--- ---------------------------------------------------------------------
-DROP DATABASE IF EXISTS fastburgers;
-CREATE DATABASE fastburgers
-  CHARACTER SET utf8mb4
-  COLLATE utf8mb4_unicode_ci;
-USE fastburgers;
 
--- ---------------------------------------------------------------------
--- 2) Core reference tables
--- ---------------------------------------------------------------------
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
 
--- Outlets (100+ in the UK)
-CREATE TABLE outlets (
-  outlet_id        INT AUTO_INCREMENT PRIMARY KEY,
-  outlet_code      VARCHAR(20) NOT NULL UNIQUE,   -- e.g., FB-GLA-001
-  name             VARCHAR(100) NOT NULL,
-  address_line1    VARCHAR(120) NOT NULL,
-  city             VARCHAR(80)  NOT NULL,
-  postcode         VARCHAR(12)  NOT NULL,
-  region           VARCHAR(60)  NOT NULL,         -- e.g., Scotland, London, etc.
-  created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
+--
+-- Database: `fastburgers`
+--
 
--- Staff: managers + sales staff take orders; cooks do not take orders from customers
-CREATE TABLE staff (
-  staff_id     INT AUTO_INCREMENT PRIMARY KEY,
-  outlet_id    INT NOT NULL,
-  first_name   VARCHAR(60) NOT NULL,
-  last_name    VARCHAR(60) NOT NULL,
-  role         ENUM('manager','sales','cook') NOT NULL,
-  email        VARCHAR(120) NULL,
-  is_active    TINYINT(1) NOT NULL DEFAULT 1,
-  hired_on     DATE NULL,
-  created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT fk_staff_outlet
-    FOREIGN KEY (outlet_id) REFERENCES outlets(outlet_id)
-    ON UPDATE CASCADE ON DELETE RESTRICT,
-  INDEX idx_staff_outlet_role (outlet_id, role)
-) ENGINE=InnoDB;
+-- --------------------------------------------------------
 
--- Shifts for managers and sales staff (cooks can be scheduled too, but only managers/sales take orders)
-CREATE TABLE shifts (
-  shift_id      BIGINT AUTO_INCREMENT PRIMARY KEY,
-  staff_id      INT NOT NULL,
-  outlet_id     INT NOT NULL,
-  shift_start   DATETIME NOT NULL,
-  shift_end     DATETIME NOT NULL,
-  role_on_shift ENUM('manager','sales','cook') NOT NULL,
-  created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT fk_shifts_staff
-    FOREIGN KEY (staff_id) REFERENCES staff(staff_id)
-    ON UPDATE CASCADE ON DELETE RESTRICT,
-  CONSTRAINT fk_shifts_outlet
-    FOREIGN KEY (outlet_id) REFERENCES outlets(outlet_id)
-    ON UPDATE CASCADE ON DELETE RESTRICT,
-  INDEX idx_shifts_outlet_time (outlet_id, shift_start, shift_end),
-  INDEX idx_shifts_staff_time  (staff_id, shift_start, shift_end)
-) ENGINE=InnoDB;
+--
+-- Table structure for table `customers`
+--
 
--- Customers placing orders
-CREATE TABLE customers (
-  customer_id   BIGINT AUTO_INCREMENT PRIMARY KEY,
-  first_name    VARCHAR(60) NOT NULL,
-  last_name     VARCHAR(60) NOT NULL,
-  phone         VARCHAR(25) NULL,
-  email         VARCHAR(120) NULL,
-  created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_customers_name (last_name, first_name)
-) ENGINE=InnoDB;
+CREATE TABLE `customers` (
+  `customer_id` bigint NOT NULL,
+  `first_name` varchar(60) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `last_name` varchar(60) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `phone` varchar(25) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `email` varchar(120) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `password` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ---------------------------------------------------------------------
--- 3) Menu + Product model
--- ---------------------------------------------------------------------
--- Requirement:
--- - Two menus: regular and savers
--- - All products sold must be on either regular or savers (we model this via products.default_menu)
--- - Regular menu has a breakfast section that finishes at 11am each day
--- - Savers menu has start/end dates and changes monthly
+--
+-- Dumping data for table `customers`
+--
 
-CREATE TABLE menus (
-  menu_id      INT AUTO_INCREMENT PRIMARY KEY,
-  menu_type    ENUM('regular','savers') NOT NULL,
-  name         VARCHAR(100) NOT NULL,
-  start_date   DATE NULL, -- used for savers
-  end_date     DATE NULL, -- used for savers
-  is_active    TINYINT(1) NOT NULL DEFAULT 1,
-  created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CHECK (
-    (menu_type='regular' AND start_date IS NULL AND end_date IS NULL)
-    OR
-    (menu_type='savers' AND start_date IS NOT NULL AND end_date IS NOT NULL)
-  ),
-  INDEX idx_menus_type_active (menu_type, is_active),
-  INDEX idx_menus_savers_dates (start_date, end_date)
-) ENGINE=InnoDB;
+INSERT INTO `customers` (`customer_id`, `first_name`, `last_name`, `phone`, `email`, `created_at`, `password`) VALUES
+(1, 'Olivia', 'Taylor', '07123456789', 'olivia.taylor@example.test', '2026-02-17 22:11:05', ''),
+(2, 'George', 'Smith', '07987654321', 'george.smith@example.test', '2026-02-17 22:11:05', ''),
+(3, 'Amelia', 'Wilson', NULL, NULL, '2026-02-17 22:11:05', ''),
+(4, 'Kareb', 'Sturgeon', '09876 566545', 'ksturgeongcc@gmail.com', '2026-02-24 23:26:59', '$2y$10$j6yodKBEeKZHUSKpCCTVteLprhBZw8aXrkA97sz9/DB.QmljN/7ri'),
+(5, 'karen', 'sturgeon', '87653 535555', 'maccasturgeon@gmail.com', '2026-02-24 23:49:23', '$2y$10$/f9zYzosyWthy4pcfyYKwOEl1zRl3hPLCCz81fnf49FaohoBbhkXa'),
+(6, 'karen', 'sturgeon', '4545454555', 'ksturgeon@glasgow.ac.uk', '2026-02-25 09:23:42', '$2y$10$IkBFcNglA582edBBGYihxOw1qJBextp6JkYfmoXIULG.j1OyI75M6'),
+(7, 'karen', 'sturgeon', NULL, 'karen@email.com', '2026-03-16 23:41:50', '$2y$10$3D.5frAG64XLAm91NkI.rOotRoKNiPNUnC3jYZZ8d0A0x/.hGKFy.');
 
--- Products: every product belongs to either the regular menu or savers menu by default.
-CREATE TABLE products (
-  product_id      INT AUTO_INCREMENT PRIMARY KEY,
-  sku             VARCHAR(30) NOT NULL UNIQUE,
-  name            VARCHAR(120) NOT NULL,
-  category        ENUM('burger','chips','drink','breakfast','dessert','other') NOT NULL,
-  price_gbp       DECIMAL(8,2) NOT NULL,
-  default_menu    ENUM('regular','savers') NOT NULL,
-  is_active       TINYINT(1) NOT NULL DEFAULT 1,
-  created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_products_menu_category (default_menu, category),
-  INDEX idx_products_name (name)
-) ENGINE=InnoDB;
+-- --------------------------------------------------------
 
--- Menu items: which products appear on which menu + optional time window for breakfast.
-CREATE TABLE menu_items (
-  menu_item_id     BIGINT AUTO_INCREMENT PRIMARY KEY,
-  menu_id          INT NOT NULL,
-  product_id       INT NOT NULL,
-  section          ENUM('breakfast','mains','sides','drinks','desserts','other') NOT NULL DEFAULT 'mains',
-  available_from   TIME NULL, -- e.g., breakfast starts at 06:00
-  available_to     TIME NULL, -- breakfast ends at 11:00
-  created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT fk_menu_items_menu
-    FOREIGN KEY (menu_id) REFERENCES menus(menu_id)
-    ON UPDATE CASCADE ON DELETE CASCADE,
-  CONSTRAINT fk_menu_items_product
-    FOREIGN KEY (product_id) REFERENCES products(product_id)
-    ON UPDATE CASCADE ON DELETE RESTRICT,
-  UNIQUE KEY uq_menu_product (menu_id, product_id),
-  INDEX idx_menu_items_menu_section (menu_id, section)
-) ENGINE=InnoDB;
+--
+-- Table structure for table `menus`
+--
 
--- ---------------------------------------------------------------------
--- 4) Orders
--- ---------------------------------------------------------------------
--- Track:
--- - which customer places which order
--- - all items on that order
--- - paid by cash or card
--- - which member of staff took that order
--- - outlet-level reporting across all outlets
+CREATE TABLE `menus` (
+  `menu_id` int NOT NULL,
+  `menu_type` enum('regular','savers') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `start_date` date DEFAULT NULL,
+  `end_date` date DEFAULT NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT '1',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ;
 
-CREATE TABLE orders (
-  order_id       BIGINT AUTO_INCREMENT PRIMARY KEY,
-  outlet_id      INT NOT NULL,
-  customer_id    BIGINT NOT NULL,
-  taken_by_staff_id INT NOT NULL,
-  ordered_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  payment_method ENUM('cash','card') NOT NULL,
-  total_gbp      DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-  status         ENUM('placed','paid','cancelled') NOT NULL DEFAULT 'paid',
-  created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT fk_orders_outlet
-    FOREIGN KEY (outlet_id) REFERENCES outlets(outlet_id)
-    ON UPDATE CASCADE ON DELETE RESTRICT,
-  CONSTRAINT fk_orders_customer
-    FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
-    ON UPDATE CASCADE ON DELETE RESTRICT,
-  CONSTRAINT fk_orders_staff
-    FOREIGN KEY (taken_by_staff_id) REFERENCES staff(staff_id)
-    ON UPDATE CASCADE ON DELETE RESTRICT,
-  INDEX idx_orders_outlet_date (outlet_id, ordered_at),
-  INDEX idx_orders_staff_date (taken_by_staff_id, ordered_at),
-  INDEX idx_orders_payment (payment_method)
-) ENGINE=InnoDB;
+--
+-- Dumping data for table `menus`
+--
 
-CREATE TABLE order_items (
-  order_item_id  BIGINT AUTO_INCREMENT PRIMARY KEY,
-  order_id       BIGINT NOT NULL,
-  product_id     INT NOT NULL,
-  quantity       INT NOT NULL DEFAULT 1,
-  unit_price_gbp DECIMAL(8,2) NOT NULL,
-  line_total_gbp DECIMAL(10,2) NOT NULL,
-  CONSTRAINT fk_order_items_order
-    FOREIGN KEY (order_id) REFERENCES orders(order_id)
-    ON UPDATE CASCADE ON DELETE CASCADE,
-  CONSTRAINT fk_order_items_product
-    FOREIGN KEY (product_id) REFERENCES products(product_id)
-    ON UPDATE CASCADE ON DELETE RESTRICT,
-  INDEX idx_order_items_order (order_id),
-  INDEX idx_order_items_product (product_id)
-) ENGINE=InnoDB;
+INSERT INTO `menus` (`menu_id`, `menu_type`, `name`, `start_date`, `end_date`, `is_active`, `created_at`) VALUES
+(1, 'regular', 'Regular Menu', NULL, NULL, 1, '2026-02-17 22:11:05'),
+(2, 'savers', 'Festive Savers Menu', '2025-12-01', '2025-12-31', 0, '2026-02-17 22:11:05'),
+(3, 'savers', 'January Savers Menu', '2026-01-01', '2026-01-31', 1, '2026-02-17 22:11:05');
 
--- ---------------------------------------------------------------------
--- 5) Stock + automatic restock requests
--- ---------------------------------------------------------------------
--- Track stock per outlet per product.
--- Auto-create a restock request when stock drops below a reorder level.
--- Manager is responsible for keeping stock up to date, so we record manager_id on updates/requests.
+-- --------------------------------------------------------
 
-CREATE TABLE stock (
-  stock_id        BIGINT AUTO_INCREMENT PRIMARY KEY,
-  outlet_id       INT NOT NULL,
-  product_id      INT NOT NULL,
-  quantity        INT NOT NULL DEFAULT 0,
-  unit            ENUM('items','bags_1kg','litres','other') NOT NULL DEFAULT 'items',
-  last_updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  last_updated_by_manager_id INT NULL,
-  CONSTRAINT fk_stock_outlet
-    FOREIGN KEY (outlet_id) REFERENCES outlets(outlet_id)
-    ON UPDATE CASCADE ON DELETE RESTRICT,
-  CONSTRAINT fk_stock_product
-    FOREIGN KEY (product_id) REFERENCES products(product_id)
-    ON UPDATE CASCADE ON DELETE RESTRICT,
-  CONSTRAINT fk_stock_manager
-    FOREIGN KEY (last_updated_by_manager_id) REFERENCES staff(staff_id)
-    ON UPDATE CASCADE ON DELETE SET NULL,
-  UNIQUE KEY uq_stock_outlet_product (outlet_id, product_id),
-  INDEX idx_stock_outlet (outlet_id),
-  INDEX idx_stock_product (product_id)
-) ENGINE=InnoDB;
+--
+-- Table structure for table `menu_items`
+--
 
--- Reorder rules: per product thresholds (e.g., burgers < 500, chips bags < 200, etc.)
-CREATE TABLE stock_rules (
-  stock_rule_id  INT AUTO_INCREMENT PRIMARY KEY,
-  product_id     INT NOT NULL UNIQUE,
-  reorder_level  INT NOT NULL,       -- when quantity goes below this, request restock
-  reorder_amount INT NOT NULL,       -- suggested quantity to order
-  created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT fk_stock_rules_product
-    FOREIGN KEY (product_id) REFERENCES products(product_id)
-    ON UPDATE CASCADE ON DELETE CASCADE
-) ENGINE=InnoDB;
+CREATE TABLE `menu_items` (
+  `menu_item_id` bigint NOT NULL,
+  `menu_id` int NOT NULL,
+  `product_id` int NOT NULL,
+  `section` enum('breakfast','mains','sides','drinks','desserts','other') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'mains',
+  `available_from` time DEFAULT NULL,
+  `available_to` time DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Restock requests
-CREATE TABLE restock_requests (
-  restock_request_id BIGINT AUTO_INCREMENT PRIMARY KEY,
-  outlet_id          INT NOT NULL,
-  product_id         INT NOT NULL,
-  requested_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  requested_by_manager_id INT NULL,
-  current_quantity   INT NOT NULL,
-  reorder_level      INT NOT NULL,
-  suggested_amount   INT NOT NULL,
-  status             ENUM('open','ordered','received','cancelled') NOT NULL DEFAULT 'open',
-  CONSTRAINT fk_restock_outlet
-    FOREIGN KEY (outlet_id) REFERENCES outlets(outlet_id)
-    ON UPDATE CASCADE ON DELETE RESTRICT,
-  CONSTRAINT fk_restock_product
-    FOREIGN KEY (product_id) REFERENCES products(product_id)
-    ON UPDATE CASCADE ON DELETE RESTRICT,
-  CONSTRAINT fk_restock_manager
-    FOREIGN KEY (requested_by_manager_id) REFERENCES staff(staff_id)
-    ON UPDATE CASCADE ON DELETE SET NULL,
-  INDEX idx_restock_outlet_status (outlet_id, status),
-  INDEX idx_restock_product_status (product_id, status)
-) ENGINE=InnoDB;
+--
+-- Dumping data for table `menu_items`
+--
 
--- ---------------------------------------------------------------------
--- 6) Triggers (business rules enforcement)
--- ---------------------------------------------------------------------
+INSERT INTO `menu_items` (`menu_item_id`, `menu_id`, `product_id`, `section`, `available_from`, `available_to`, `created_at`) VALUES
+(1, 1, 1, 'mains', NULL, NULL, '2026-02-17 22:11:05'),
+(2, 1, 2, 'mains', NULL, NULL, '2026-02-17 22:11:05'),
+(3, 1, 3, 'sides', NULL, NULL, '2026-02-17 22:11:05'),
+(4, 1, 4, 'drinks', NULL, NULL, '2026-02-17 22:11:05'),
+(5, 1, 5, 'breakfast', '06:00:00', '11:00:00', '2026-02-17 22:11:05'),
+(6, 3, 6, 'mains', NULL, NULL, '2026-02-17 22:11:05'),
+(7, 3, 7, 'sides', NULL, NULL, '2026-02-17 22:11:05');
 
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `orders`
+--
+
+CREATE TABLE `orders` (
+  `order_id` bigint NOT NULL,
+  `outlet_id` int NOT NULL,
+  `customer_id` bigint NOT NULL,
+  `taken_by_staff_id` int NOT NULL,
+  `ordered_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `payment_method` enum('cash','card') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `total_gbp` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `status` enum('placed','paid','cancelled') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'paid',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `orders`
+--
+
+INSERT INTO `orders` (`order_id`, `outlet_id`, `customer_id`, `taken_by_staff_id`, `ordered_at`, `payment_method`, `total_gbp`, `status`, `created_at`) VALUES
+(1, 1, 1, 3, '2026-01-20 09:15:00', 'card', 5.48, 'paid', '2026-02-17 22:11:05'),
+(2, 1, 2, 3, '2026-01-20 09:45:00', 'cash', 7.48, 'paid', '2026-02-17 22:11:05'),
+(3, 1, 3, 3, '2026-01-20 10:05:00', 'card', 5.48, 'paid', '2026-02-17 22:11:05'),
+(4, 1, 2, 1, '2026-01-20 11:20:00', 'cash', 7.98, 'paid', '2026-02-17 22:11:05'),
+(5, 2, 1, 8, '2026-01-20 12:10:00', 'card', 14.96, 'paid', '2026-02-17 22:11:05'),
+(6, 2, 3, 8, '2026-01-20 12:40:00', 'card', 5.98, 'paid', '2026-02-17 22:11:05');
+
+--
+-- Triggers `orders`
+--
 DELIMITER $$
-
--- (A) Prevent cooks from taking orders
-CREATE TRIGGER trg_orders_no_cook
-BEFORE INSERT ON orders
-FOR EACH ROW
-BEGIN
+CREATE TRIGGER `trg_orders_no_cook` BEFORE INSERT ON `orders` FOR EACH ROW BEGIN
   DECLARE staffRole VARCHAR(20);
 
   SELECT role INTO staffRole
@@ -274,21 +149,54 @@ BEGIN
     SIGNAL SQLSTATE '45000'
       SET MESSAGE_TEXT = 'Cooks cannot take orders directly from customers.';
   END IF;
-END$$
+END
+$$
+DELIMITER ;
 
--- (B) Auto-calculate line totals in order_items (safety net)
-CREATE TRIGGER trg_order_items_calc
-BEFORE INSERT ON order_items
-FOR EACH ROW
-BEGIN
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `order_items`
+--
+
+CREATE TABLE `order_items` (
+  `order_item_id` bigint NOT NULL,
+  `order_id` bigint NOT NULL,
+  `product_id` int NOT NULL,
+  `quantity` int NOT NULL DEFAULT '1',
+  `unit_price_gbp` decimal(8,2) NOT NULL,
+  `line_total_gbp` decimal(10,2) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `order_items`
+--
+
+INSERT INTO `order_items` (`order_item_id`, `order_id`, `product_id`, `quantity`, `unit_price_gbp`, `line_total_gbp`) VALUES
+(1, 1, 5, 1, 3.49, 3.49),
+(2, 1, 4, 1, 1.99, 1.99),
+(3, 2, 1, 1, 4.99, 4.99),
+(4, 2, 3, 1, 2.49, 2.49),
+(5, 3, 6, 1, 3.99, 3.99),
+(6, 3, 7, 1, 1.49, 1.49),
+(7, 4, 2, 1, 5.49, 5.49),
+(8, 4, 3, 1, 2.49, 2.49),
+(9, 5, 1, 2, 4.99, 9.98),
+(10, 5, 3, 2, 2.49, 4.98),
+(11, 6, 6, 1, 3.99, 3.99),
+(12, 6, 4, 1, 1.99, 1.99);
+
+--
+-- Triggers `order_items`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_order_items_calc` BEFORE INSERT ON `order_items` FOR EACH ROW BEGIN
   SET NEW.line_total_gbp = NEW.unit_price_gbp * NEW.quantity;
-END$$
-
--- (C) Update order total whenever a new order item is inserted
-CREATE TRIGGER trg_orders_update_total_after_item
-AFTER INSERT ON order_items
-FOR EACH ROW
-BEGIN
+END
+$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `trg_orders_update_total_after_item` AFTER INSERT ON `order_items` FOR EACH ROW BEGIN
   UPDATE orders
   SET total_gbp = (
     SELECT IFNULL(SUM(line_total_gbp), 0)
@@ -296,14 +204,177 @@ BEGIN
     WHERE order_id = NEW.order_id
   )
   WHERE order_id = NEW.order_id;
-END$$
+END
+$$
+DELIMITER ;
 
--- (D) Create a restock request automatically when stock drops below threshold
---     This trigger fires on INSERT and UPDATE of stock.
-CREATE TRIGGER trg_stock_restock_after_update
-AFTER UPDATE ON stock
-FOR EACH ROW
-BEGIN
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `outlets`
+--
+
+CREATE TABLE `outlets` (
+  `outlet_id` int NOT NULL,
+  `outlet_code` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `address_line1` varchar(120) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `city` varchar(80) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `postcode` varchar(12) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `region` varchar(60) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `outlets`
+--
+
+INSERT INTO `outlets` (`outlet_id`, `outlet_code`, `name`, `address_line1`, `city`, `postcode`, `region`, `created_at`) VALUES
+(1, 'FB-LON-001', 'FastBurgers London Central', '1 High Street', 'London', 'SW1A 1AA', 'London', '2026-02-17 22:11:05'),
+(2, 'FB-MAN-001', 'FastBurgers Manchester Piccadilly', '10 Market Road', 'Manchester', 'M1 1AE', 'North West', '2026-02-17 22:11:05');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `products`
+--
+
+CREATE TABLE `products` (
+  `product_id` int NOT NULL,
+  `sku` varchar(30) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `name` varchar(120) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `category` enum('burger','chips','drink','breakfast','dessert','other') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `price_gbp` decimal(8,2) NOT NULL,
+  `default_menu` enum('regular','savers') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT '1',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `quantity` int NOT NULL DEFAULT '0'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `products`
+--
+
+INSERT INTO `products` (`product_id`, `sku`, `name`, `category`, `price_gbp`, `default_menu`, `is_active`, `created_at`, `quantity`) VALUES
+(1, 'BRG-001', 'Classic Burger', 'burger', 4.99, 'regular', 1, '2026-02-17 22:11:05', 0),
+(2, 'BRG-002', 'Cheese Burger', 'burger', 5.49, 'regular', 1, '2026-02-17 22:11:05', 0),
+(3, 'CHP-001', 'Chips (Regular)', 'chips', 2.49, 'regular', 1, '2026-02-17 22:11:05', 0),
+(4, 'DRK-001', 'Cola (500ml)', 'drink', 1.99, 'regular', 1, '2026-02-17 22:11:05', 0),
+(5, 'BRF-001', 'Breakfast Muffin', 'breakfast', 3.49, 'regular', 1, '2026-02-17 22:11:05', 0),
+(6, 'SAV-001', 'Saver Burger Deal', 'burger', 3.99, 'savers', 1, '2026-02-17 22:11:05', 0),
+(7, 'SAV-002', 'Saver Chips Deal', 'chips', 1.49, 'savers', 1, '2026-02-17 22:11:05', 0);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `restock_requests`
+--
+
+CREATE TABLE `restock_requests` (
+  `restock_request_id` bigint NOT NULL,
+  `outlet_id` int NOT NULL,
+  `product_id` int NOT NULL,
+  `requested_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `requested_by_manager_id` int DEFAULT NULL,
+  `current_quantity` int NOT NULL,
+  `reorder_level` int NOT NULL,
+  `suggested_amount` int NOT NULL,
+  `status` enum('open','ordered','received','cancelled') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'open'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `shifts`
+--
+
+CREATE TABLE `shifts` (
+  `shift_id` bigint NOT NULL,
+  `staff_id` int NOT NULL,
+  `outlet_id` int NOT NULL,
+  `shift_start` datetime NOT NULL,
+  `shift_end` datetime NOT NULL,
+  `role_on_shift` enum('manager','sales','cook') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `shifts`
+--
+
+INSERT INTO `shifts` (`shift_id`, `staff_id`, `outlet_id`, `shift_start`, `shift_end`, `role_on_shift`, `created_at`) VALUES
+(1, 1, 1, '2026-01-20 08:00:00', '2026-01-20 16:00:00', 'manager', '2026-02-17 22:11:05'),
+(2, 3, 1, '2026-01-20 09:00:00', '2026-01-20 17:00:00', 'sales', '2026-02-17 22:11:05'),
+(3, 6, 2, '2026-01-20 08:00:00', '2026-01-20 16:00:00', 'manager', '2026-02-17 22:11:05'),
+(4, 8, 2, '2026-01-20 10:00:00', '2026-01-20 18:00:00', 'sales', '2026-02-17 22:11:05');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `staff`
+--
+
+CREATE TABLE `staff` (
+  `staff_id` int NOT NULL,
+  `outlet_id` int NOT NULL,
+  `first_name` varchar(60) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `last_name` varchar(60) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `role` enum('manager','sales','cook') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `email` varchar(120) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT '1',
+  `hired_on` date DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `password` varchar(132) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `admin` int NOT NULL DEFAULT '0'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `staff`
+--
+
+INSERT INTO `staff` (`staff_id`, `outlet_id`, `first_name`, `last_name`, `role`, `email`, `is_active`, `hired_on`, `created_at`, `password`, `admin`) VALUES
+(1, 1, 'Aisha', 'Khan', 'manager', 'aisha.khan@fastburgers.test', 1, '2024-01-10', '2026-02-17 22:11:05', '', 0),
+(2, 1, 'Tom', 'Bennett', 'manager', 'tom.bennett@fastburgers.test', 1, '2024-02-12', '2026-02-17 22:11:05', '', 0),
+(3, 1, 'Leah', 'Jones', 'sales', 'leah.jones@fastburgers.test', 1, '2024-04-01', '2026-02-17 22:11:05', '', 0),
+(4, 1, 'Sam', 'Patel', 'sales', 'sam.patel@fastburgers.test', 1, '2024-05-15', '2026-02-17 22:11:05', '', 0),
+(5, 1, 'Ivy', 'Wright', 'cook', 'ivy.wong@fastburgers.test', 1, '2024-03-20', '2026-02-17 22:11:05', '', 0),
+(6, 2, 'Noah', 'Evans', 'manager', 'noah.evans@fastburgers.test', 1, '2023-11-05', '2026-02-17 22:11:05', '', 0),
+(7, 2, 'Priya', 'Singh', 'manager', 'priya.singh@fastburgers.test', 1, '2024-01-22', '2026-02-17 22:11:05', '', 0),
+(8, 2, 'Mia', 'Brown', 'sales', 'mia.brown@fastburgers.test', 1, '2024-02-14', '2026-02-17 22:11:05', '', 0),
+(9, 2, 'Jack', 'White', 'sales', 'jack.white@fastburgers.test', 1, '2024-06-02', '2026-02-17 22:11:05', '', 0),
+(10, 2, 'Ben', 'Green', 'cook', 'admin@email.com', 1, '2024-03-01', '2026-02-17 22:11:05', '$2y$10$3D.5frAG64XLAm91NkI.rOotRoKNiPNUnC3jYZZ8d0A0x/.hGKFy.', 1);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `stock`
+--
+
+CREATE TABLE `stock` (
+  `stock_id` bigint NOT NULL,
+  `outlet_id` int NOT NULL,
+  `product_id` int NOT NULL,
+  `quantity` int NOT NULL DEFAULT '0',
+  `unit` enum('items','bags_1kg','litres','other') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'items',
+  `last_updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `last_updated_by_manager_id` int DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `stock`
+--
+
+INSERT INTO `stock` (`stock_id`, `outlet_id`, `product_id`, `quantity`, `unit`, `last_updated_at`, `last_updated_by_manager_id`) VALUES
+(1, 1, 1, 650, 'items', '2026-02-17 22:11:05', 1),
+(2, 1, 3, 250, 'bags_1kg', '2026-02-17 22:11:05', 1),
+(3, 2, 1, 520, 'items', '2026-02-17 22:11:05', 6),
+(4, 2, 3, 190, 'bags_1kg', '2026-02-17 22:11:05', 6);
+
+--
+-- Triggers `stock`
+--
+DELIMITER $$
+CREATE TRIGGER `trg_stock_restock_after_update` AFTER UPDATE ON `stock` FOR EACH ROW BEGIN
   DECLARE lvl INT;
   DECLARE amt INT;
 
@@ -336,138 +407,273 @@ BEGIN
 
     END IF;
   END IF;
-END$$
-
+END
+$$
 DELIMITER ;
 
--- ---------------------------------------------------------------------
--- 7) Sample data (small but useful for testing queries)
--- ---------------------------------------------------------------------
+-- --------------------------------------------------------
 
-INSERT INTO outlets (outlet_code, name, address_line1, city, postcode, region) VALUES
-('FB-LON-001', 'FastBurgers London Central', '1 High Street', 'London', 'SW1A 1AA', 'London'),
-('FB-MAN-001', 'FastBurgers Manchester Piccadilly', '10 Market Road', 'Manchester', 'M1 1AE', 'North West');
-
--- Staff: each outlet has 2 managers + sales staff + cooks
-INSERT INTO staff (outlet_id, first_name, last_name, role, email, hired_on) VALUES
-(1, 'Aisha', 'Khan', 'manager', 'aisha.khan@fastburgers.test', '2024-01-10'),
-(1, 'Tom', 'Bennett', 'manager', 'tom.bennett@fastburgers.test', '2024-02-12'),
-(1, 'Leah', 'Jones', 'sales',   'leah.jones@fastburgers.test', '2024-04-01'),
-(1, 'Sam',  'Patel', 'sales',   'sam.patel@fastburgers.test', '2024-05-15'),
-(1, 'Ivy',  'Wong',  'cook',    'ivy.wong@fastburgers.test', '2024-03-20'),
-
-(2, 'Noah', 'Evans', 'manager', 'noah.evans@fastburgers.test', '2023-11-05'),
-(2, 'Priya','Singh', 'manager', 'priya.singh@fastburgers.test', '2024-01-22'),
-(2, 'Mia',  'Brown', 'sales',   'mia.brown@fastburgers.test', '2024-02-14'),
-(2, 'Jack', 'White', 'sales',   'jack.white@fastburgers.test', '2024-06-02'),
-(2, 'Ben',  'Green', 'cook',    'ben.green@fastburgers.test', '2024-03-01');
-
--- Shifts (example)
-INSERT INTO shifts (staff_id, outlet_id, shift_start, shift_end, role_on_shift) VALUES
-(1, 1, '2026-01-20 08:00:00', '2026-01-20 16:00:00', 'manager'),
-(3, 1, '2026-01-20 09:00:00', '2026-01-20 17:00:00', 'sales'),
-(6, 2, '2026-01-20 08:00:00', '2026-01-20 16:00:00', 'manager'),
-(8, 2, '2026-01-20 10:00:00', '2026-01-20 18:00:00', 'sales');
-
--- Menus
-INSERT INTO menus (menu_type, name, start_date, end_date, is_active) VALUES
-('regular', 'Regular Menu', NULL, NULL, 1),
-('savers',  'Festive Savers Menu', '2025-12-01', '2025-12-31', 0),
-('savers',  'January Savers Menu', '2026-01-01', '2026-01-31', 1);
-
--- Products (all belong to either regular or savers by default)
-INSERT INTO products (sku, name, category, price_gbp, default_menu) VALUES
-('BRG-001', 'Classic Burger', 'burger', 4.99, 'regular'),
-('BRG-002', 'Cheese Burger',  'burger', 5.49, 'regular'),
-('CHP-001', 'Chips (Regular)', 'chips',  2.49, 'regular'),
-('DRK-001', 'Cola (500ml)',    'drink',  1.99, 'regular'),
-('BRF-001', 'Breakfast Muffin','breakfast', 3.49, 'regular'),
-('SAV-001', 'Saver Burger Deal', 'burger', 3.99, 'savers'),
-('SAV-002', 'Saver Chips Deal',  'chips',  1.49, 'savers');
-
--- Menu items (Regular + Savers)
--- Breakfast items end at 11:00 every day
-INSERT INTO menu_items (menu_id, product_id, section, available_from, available_to) VALUES
-(1, 1, 'mains',     NULL, NULL),
-(1, 2, 'mains',     NULL, NULL),
-(1, 3, 'sides',     NULL, NULL),
-(1, 4, 'drinks',    NULL, NULL),
-(1, 5, 'breakfast', '06:00:00', '11:00:00'),
-
-(3, 6, 'mains',     NULL, NULL),
-(3, 7, 'sides',     NULL, NULL);
-
--- Customers
-INSERT INTO customers (first_name, last_name, phone, email) VALUES
-('Olivia', 'Taylor', '07123456789', 'olivia.taylor@example.test'),
-('George', 'Smith',  '07987654321', 'george.smith@example.test'),
-('Amelia', 'Wilson', NULL, NULL);
-
--- Orders + order items (sample so you can query “top staff” and “popular products”)
--- Outlet 1: Leah (sales) takes 3 orders
-INSERT INTO orders (outlet_id, customer_id, taken_by_staff_id, ordered_at, payment_method, status)
-VALUES
-(1, 1, 3, '2026-01-20 09:15:00', 'card', 'paid'),
-(1, 2, 3, '2026-01-20 09:45:00', 'cash', 'paid'),
-(1, 3, 3, '2026-01-20 10:05:00', 'card', 'paid');
-
-INSERT INTO order_items (order_id, product_id, quantity, unit_price_gbp, line_total_gbp) VALUES
-(1, 5, 1, 3.49, 0), -- breakfast muffin
-(1, 4, 1, 1.99, 0),
-(2, 1, 1, 4.99, 0),
-(2, 3, 1, 2.49, 0),
-(3, 6, 1, 3.99, 0), -- saver deal
-(3, 7, 1, 1.49, 0);
-
--- Outlet 1: manager Aisha also takes 1 order
-INSERT INTO orders (outlet_id, customer_id, taken_by_staff_id, ordered_at, payment_method, status)
-VALUES (1, 2, 1, '2026-01-20 11:20:00', 'cash', 'paid');
-
-INSERT INTO order_items (order_id, product_id, quantity, unit_price_gbp, line_total_gbp) VALUES
-(4, 2, 1, 5.49, 0),
-(4, 3, 1, 2.49, 0);
-
--- Outlet 2: Mia takes 2 orders
-INSERT INTO orders (outlet_id, customer_id, taken_by_staff_id, ordered_at, payment_method, status)
-VALUES
-(2, 1, 8, '2026-01-20 12:10:00', 'card', 'paid'),
-(2, 3, 8, '2026-01-20 12:40:00', 'card', 'paid');
-
-INSERT INTO order_items (order_id, product_id, quantity, unit_price_gbp, line_total_gbp) VALUES
-(5, 1, 2, 4.99, 0),
-(5, 3, 2, 2.49, 0),
-(6, 6, 1, 3.99, 0),
-(6, 4, 1, 1.99, 0);
-
--- Stock setup (per outlet)
-INSERT INTO stock (outlet_id, product_id, quantity, unit, last_updated_by_manager_id) VALUES
-(1, 1, 650, 'items', 1),   -- burgers
-(1, 3, 250, 'bags_1kg', 1), -- chips bags
-(2, 1, 520, 'items', 6),
-(2, 3, 190, 'bags_1kg', 6); -- below threshold example
-
--- Stock reorder rules (example thresholds from the brief)
--- burgers: request restock below 500
--- chips (1kg bags): request restock below 200
-INSERT INTO stock_rules (product_id, reorder_level, reorder_amount) VALUES
-(1, 500, 1000),
-(3, 200, 500);
-
--- To see the restock trigger in action, try updating stock quantity lower than threshold:
--- UPDATE stock SET quantity = 480, last_updated_by_manager_id = 1 WHERE outlet_id=1 AND product_id=1;
-
--- ---------------------------------------------------------------------
--- 8) Useful example queries (optional)
--- ---------------------------------------------------------------------
--- 8.1 Staff taking the most orders (across all outlets)
--- SELECT taken_by_staff_id, COUNT(*) AS orders_taken
--- FROM orders
--- GROUP BY taken_by_staff_id
--- ORDER BY orders_taken DESC;
 --
--- 8.2 Most popular products (by quantity sold)
--- SELECT p.name, SUM(oi.quantity) AS qty_sold
--- FROM order_items oi
--- JOIN products p ON p.product_id = oi.product_id
--- GROUP BY p.product_id
--- ORDER BY qty_sold DESC;
+-- Table structure for table `stock_rules`
+--
+
+CREATE TABLE `stock_rules` (
+  `stock_rule_id` int NOT NULL,
+  `product_id` int NOT NULL,
+  `reorder_level` int NOT NULL,
+  `reorder_amount` int NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `stock_rules`
+--
+
+INSERT INTO `stock_rules` (`stock_rule_id`, `product_id`, `reorder_level`, `reorder_amount`, `created_at`) VALUES
+(1, 1, 500, 1000, '2026-02-17 22:11:05'),
+(2, 3, 200, 500, '2026-02-17 22:11:05');
+
+--
+-- Indexes for dumped tables
+--
+
+--
+-- Indexes for table `customers`
+--
+ALTER TABLE `customers`
+  ADD PRIMARY KEY (`customer_id`),
+  ADD KEY `idx_customers_name` (`last_name`,`first_name`);
+
+--
+-- Indexes for table `menus`
+--
+ALTER TABLE `menus`
+  ADD PRIMARY KEY (`menu_id`),
+  ADD KEY `idx_menus_type_active` (`menu_type`,`is_active`),
+  ADD KEY `idx_menus_savers_dates` (`start_date`,`end_date`);
+
+--
+-- Indexes for table `menu_items`
+--
+ALTER TABLE `menu_items`
+  ADD PRIMARY KEY (`menu_item_id`),
+  ADD UNIQUE KEY `uq_menu_product` (`menu_id`,`product_id`),
+  ADD KEY `fk_menu_items_product` (`product_id`),
+  ADD KEY `idx_menu_items_menu_section` (`menu_id`,`section`);
+
+--
+-- Indexes for table `orders`
+--
+ALTER TABLE `orders`
+  ADD PRIMARY KEY (`order_id`),
+  ADD KEY `fk_orders_customer` (`customer_id`),
+  ADD KEY `idx_orders_outlet_date` (`outlet_id`,`ordered_at`),
+  ADD KEY `idx_orders_staff_date` (`taken_by_staff_id`,`ordered_at`),
+  ADD KEY `idx_orders_payment` (`payment_method`);
+
+--
+-- Indexes for table `order_items`
+--
+ALTER TABLE `order_items`
+  ADD PRIMARY KEY (`order_item_id`),
+  ADD KEY `idx_order_items_order` (`order_id`),
+  ADD KEY `idx_order_items_product` (`product_id`);
+
+--
+-- Indexes for table `outlets`
+--
+ALTER TABLE `outlets`
+  ADD PRIMARY KEY (`outlet_id`),
+  ADD UNIQUE KEY `outlet_code` (`outlet_code`);
+
+--
+-- Indexes for table `products`
+--
+ALTER TABLE `products`
+  ADD PRIMARY KEY (`product_id`),
+  ADD UNIQUE KEY `sku` (`sku`),
+  ADD KEY `idx_products_menu_category` (`default_menu`,`category`),
+  ADD KEY `idx_products_name` (`name`);
+
+--
+-- Indexes for table `restock_requests`
+--
+ALTER TABLE `restock_requests`
+  ADD PRIMARY KEY (`restock_request_id`),
+  ADD KEY `fk_restock_manager` (`requested_by_manager_id`),
+  ADD KEY `idx_restock_outlet_status` (`outlet_id`,`status`),
+  ADD KEY `idx_restock_product_status` (`product_id`,`status`);
+
+--
+-- Indexes for table `shifts`
+--
+ALTER TABLE `shifts`
+  ADD PRIMARY KEY (`shift_id`),
+  ADD KEY `idx_shifts_outlet_time` (`outlet_id`,`shift_start`,`shift_end`),
+  ADD KEY `idx_shifts_staff_time` (`staff_id`,`shift_start`,`shift_end`);
+
+--
+-- Indexes for table `staff`
+--
+ALTER TABLE `staff`
+  ADD PRIMARY KEY (`staff_id`),
+  ADD KEY `idx_staff_outlet_role` (`outlet_id`,`role`);
+
+--
+-- Indexes for table `stock`
+--
+ALTER TABLE `stock`
+  ADD PRIMARY KEY (`stock_id`),
+  ADD UNIQUE KEY `uq_stock_outlet_product` (`outlet_id`,`product_id`),
+  ADD KEY `fk_stock_manager` (`last_updated_by_manager_id`),
+  ADD KEY `idx_stock_outlet` (`outlet_id`),
+  ADD KEY `idx_stock_product` (`product_id`);
+
+--
+-- Indexes for table `stock_rules`
+--
+ALTER TABLE `stock_rules`
+  ADD PRIMARY KEY (`stock_rule_id`),
+  ADD UNIQUE KEY `product_id` (`product_id`);
+
+--
+-- AUTO_INCREMENT for dumped tables
+--
+
+--
+-- AUTO_INCREMENT for table `customers`
+--
+ALTER TABLE `customers`
+  MODIFY `customer_id` bigint NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+
+--
+-- AUTO_INCREMENT for table `menus`
+--
+ALTER TABLE `menus`
+  MODIFY `menu_id` int NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `menu_items`
+--
+ALTER TABLE `menu_items`
+  MODIFY `menu_item_id` bigint NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+
+--
+-- AUTO_INCREMENT for table `orders`
+--
+ALTER TABLE `orders`
+  MODIFY `order_id` bigint NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
+-- AUTO_INCREMENT for table `order_items`
+--
+ALTER TABLE `order_items`
+  MODIFY `order_item_id` bigint NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+
+--
+-- AUTO_INCREMENT for table `outlets`
+--
+ALTER TABLE `outlets`
+  MODIFY `outlet_id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT for table `products`
+--
+ALTER TABLE `products`
+  MODIFY `product_id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+
+--
+-- AUTO_INCREMENT for table `restock_requests`
+--
+ALTER TABLE `restock_requests`
+  MODIFY `restock_request_id` bigint NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `shifts`
+--
+ALTER TABLE `shifts`
+  MODIFY `shift_id` bigint NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `staff`
+--
+ALTER TABLE `staff`
+  MODIFY `staff_id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+
+--
+-- AUTO_INCREMENT for table `stock`
+--
+ALTER TABLE `stock`
+  MODIFY `stock_id` bigint NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `stock_rules`
+--
+ALTER TABLE `stock_rules`
+  MODIFY `stock_rule_id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- Constraints for dumped tables
+--
+
+--
+-- Constraints for table `menu_items`
+--
+ALTER TABLE `menu_items`
+  ADD CONSTRAINT `fk_menu_items_menu` FOREIGN KEY (`menu_id`) REFERENCES `menus` (`menu_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_menu_items_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+--
+-- Constraints for table `orders`
+--
+ALTER TABLE `orders`
+  ADD CONSTRAINT `fk_orders_customer` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`customer_id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_orders_outlet` FOREIGN KEY (`outlet_id`) REFERENCES `outlets` (`outlet_id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_orders_staff` FOREIGN KEY (`taken_by_staff_id`) REFERENCES `staff` (`staff_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+--
+-- Constraints for table `order_items`
+--
+ALTER TABLE `order_items`
+  ADD CONSTRAINT `fk_order_items_order` FOREIGN KEY (`order_id`) REFERENCES `orders` (`order_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_order_items_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+--
+-- Constraints for table `restock_requests`
+--
+ALTER TABLE `restock_requests`
+  ADD CONSTRAINT `fk_restock_manager` FOREIGN KEY (`requested_by_manager_id`) REFERENCES `staff` (`staff_id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_restock_outlet` FOREIGN KEY (`outlet_id`) REFERENCES `outlets` (`outlet_id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_restock_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+--
+-- Constraints for table `shifts`
+--
+ALTER TABLE `shifts`
+  ADD CONSTRAINT `fk_shifts_outlet` FOREIGN KEY (`outlet_id`) REFERENCES `outlets` (`outlet_id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_shifts_staff` FOREIGN KEY (`staff_id`) REFERENCES `staff` (`staff_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+--
+-- Constraints for table `staff`
+--
+ALTER TABLE `staff`
+  ADD CONSTRAINT `fk_staff_outlet` FOREIGN KEY (`outlet_id`) REFERENCES `outlets` (`outlet_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+--
+-- Constraints for table `stock`
+--
+ALTER TABLE `stock`
+  ADD CONSTRAINT `fk_stock_manager` FOREIGN KEY (`last_updated_by_manager_id`) REFERENCES `staff` (`staff_id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_stock_outlet` FOREIGN KEY (`outlet_id`) REFERENCES `outlets` (`outlet_id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_stock_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+--
+-- Constraints for table `stock_rules`
+--
+ALTER TABLE `stock_rules`
+  ADD CONSTRAINT `fk_stock_rules_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE ON UPDATE CASCADE;
+COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
