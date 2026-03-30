@@ -4,7 +4,7 @@ class OrdersController
 {
     public function index(): void
     {
-        $title = 'Fast Burgers - Admin Dashboard';
+        $title = 'Fast Burgers - Orders';
 
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
@@ -12,7 +12,7 @@ class OrdersController
 
         // Optional protection
         if (empty($_SESSION['auth']['logged_in'])) {
-            header('Location: /login');
+            header('Location: /admin-login');
             exit;
         }
 

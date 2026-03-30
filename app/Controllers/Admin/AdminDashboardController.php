@@ -12,7 +12,7 @@ class AdminDashboardController
 
         // Optional protection
         if (empty($_SESSION['auth']['logged_in'])) {
-            header('Location: /login');
+            header('Location: /admin-login');
             exit;
         }
 
