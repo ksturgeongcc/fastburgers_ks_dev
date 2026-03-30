@@ -40,17 +40,20 @@ if ($isAdmin) {
                     Register
                 </a>
 
-            <?php else: ?>
+            <?php else: ?>             
+                <a href="<?= htmlspecialchars($dashboardLink) ?>"
+                   class="text-purple-700 border border-purple-700 hover:bg-purple-50 focus:ring-4 focus:ring-purple-200 font-medium rounded-lg text-sm px-4 lg:px-5 py-2 lg:py-2.5 dark:text-white dark:border-purple-500 dark:hover:bg-purple-700 dark:hover:text-white focus:outline-none">
+                    Dashboard
+                </a>
+                  <a href="/orders"
+                   class="text-purple-700 border border-purple-700 hover:bg-purple-50 focus:ring-4 focus:ring-purple-200 font-medium rounded-lg text-sm px-4 lg:px-5 py-2 lg:py-2.5 dark:text-white dark:border-purple-500 dark:hover:bg-purple-700 dark:hover:text-white focus:outline-none">
+                    Orders
+                </a>
 
                 <!-- Logout Button -->
                 <a href="/logout"
                    class="text-white bg-red-600 hover:bg-red-700 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-4 lg:px-5 py-2 lg:py-2.5 focus:outline-none">
                     Logout
-                </a>
-                
-                <a href="<?= htmlspecialchars($dashboardLink) ?>"
-                   class="text-purple-700 border border-purple-700 hover:bg-purple-50 focus:ring-4 focus:ring-purple-200 font-medium rounded-lg text-sm px-4 lg:px-5 py-2 lg:py-2.5 dark:text-white dark:border-purple-500 dark:hover:bg-purple-700 dark:hover:text-white focus:outline-none">
-                    Dashboard
                 </a>
 
             <?php endif; ?>
