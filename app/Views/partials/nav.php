@@ -45,10 +45,12 @@ if ($isAdmin) {
                    class="text-purple-700 border border-purple-700 hover:bg-purple-50 focus:ring-4 focus:ring-purple-200 font-medium rounded-lg text-sm px-4 lg:px-5 py-2 lg:py-2.5 dark:text-white dark:border-purple-500 dark:hover:bg-purple-700 dark:hover:text-white focus:outline-none">
                     Dashboard
                 </a>
+                <?php if($isAdmin) : ?>
                   <a href="/orders"
                    class="text-purple-700 border border-purple-700 hover:bg-purple-50 focus:ring-4 focus:ring-purple-200 font-medium rounded-lg text-sm px-4 lg:px-5 py-2 lg:py-2.5 dark:text-white dark:border-purple-500 dark:hover:bg-purple-700 dark:hover:text-white focus:outline-none">
                     Orders
                 </a>
+                <?php endif ?>
 
                 <!-- Logout Button -->
                 <a href="/logout"
