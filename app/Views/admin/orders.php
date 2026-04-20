@@ -1,4 +1,4 @@
-<div class="max-w-6xl mx-auto p-6">
+ <div class="max-w-6xl mx-auto p-6">
     <h1 class="text-3xl font-bold mb-6">Orders</h1>
    
     <div class="bg-white rounded-lg shadow p-6">
@@ -31,24 +31,20 @@
                                 <td class="p-3"><?= htmlspecialchars(ucfirst($order['payment_method'])) ?></td>
                                 <td class="p-3"><?= htmlspecialchars(ucfirst($order['status'])) ?></td>
                                 <td class="p-3">£<?= number_format((float) $order['total_gbp'], 2) ?></td>
-
-                                <!-- Actions -->
                                 <td class="p-3">
                                     <div class="flex gap-2">
-                                        <!-- Edit Button -->
-                                        <button
-                                            class="bg-blue-500 hover:bg-blue-600 text-white text-sm px-3 py-1.5 rounded-lg">
+                                        <a href="/orders/edit?id=<?= urlencode($order['order_id']) ?>"
+                                           class="bg-blue-500 hover:bg-blue-600 text-white text-sm px-3 py-1.5 rounded-lg inline-block">
                                             Edit
-                                        </button>
+                                        </a>
 
-                                        <!-- Delete Button -->
-                                        <button
-                                            class="bg-red-500 hover:bg-red-600 text-white text-sm px-3 py-1.5 rounded-lg">
+                                        <a href="/orders/delete?id=<?= urlencode($order['order_id']) ?>"
+                                           onclick="return confirm('Are you sure you want to delete this order?');"
+                                           class="bg-red-500 hover:bg-red-600 text-white text-sm px-3 py-1.5 rounded-lg inline-block">
                                             Delete
-                                        </button>
+                                        </a>
                                     </div>
                                 </td>
-
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
