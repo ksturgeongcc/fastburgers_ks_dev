@@ -7,7 +7,7 @@
   <!-- Hero Section -->
   <div class=" flex-1">
     <div
-      class=" h-[50%] bg-zinc-400 bg-cover bg-center bg-no-repeat flex items-center text-white pl-[137px]">
+      class=" h-full bg-[url('/assets/images/home_bg.jpg')] bg-cover bg-center bg-no-repeat flex items-center text-white pl-[137px]">
       <div class="flex flex-col">
         <div class="text-[34px] leading-8">fastburgers</div>
         <div class="text-[56px] font-medium mb-4">Open 7 days a week</div>
