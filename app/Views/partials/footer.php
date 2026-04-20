@@ -44,9 +44,9 @@
           <span class="absolute bottom-0 left-0 w-full h-1 bg-blue-500 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300"></span>
         </h3>
         <ul class="space-y-3">
-          <li><a href="#" class="text-gray-300 hover:text-white hover:pl-2 transition-all duration-300 flex items-center">
+          <li><a href="admin-login" class="text-gray-300 hover:text-white hover:pl-2 transition-all duration-300 flex items-center">
             <span class="w-1 h-1 bg-blue-500 rounded-full mr-2 opacity-0 group-hover:opacity-100 transition duration-300"></span>
-            Home</a></li>
+            Admin Login</a></li>
           <li><a href="#" class="text-gray-300 hover:text-white hover:pl-2 transition-all duration-300 flex items-center">
             <span class="w-1 h-1 bg-blue-500 rounded-full mr-2 opacity-0 group-hover:opacity-100 transition duration-300"></span>
             Projects</a></li>
